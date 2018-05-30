@@ -21,14 +21,10 @@ bool timerIsReady(){
 	return nSysTime >= launchTimer;
 }
 
+const int launchPower = 65;
 void driveLauncher(int speed){
 	motor[LMotor] = speed;
 	motor[RMotor] = speed;
-}
-
-const int maxChargePower = 127;
-void chargeLauncher(){
-	driveLauncher(maxChargePower);
 }
 
 const int stopPower = 5;
@@ -41,15 +37,25 @@ void launchBall(){
 	ballLaunch = true;
 }
 
+int marbleReadyCounter = 0;
+
 bool isMarbleReady(){
-	return SensorValue[BallDetect] > marbleLightThreshold;
+	bool marbleDetected = SensorValue[BallDetect] > marbleLightThreshold;
+	if(marbleDetected){
+		marbleReadyCounter++;
+	}
+	else{
+		marbleReadyCounter = 0;
+	}
+	return marbleReadyCounter >= 10 && marbleDetected;
 }
 
 task launcherControl{
 	float launcherKp = 1.0;
 	while(true){
 		if(ballLaunch){
-			chargeLauncher();
+			wait1Msec(150);
+			driveLauncher(launchPower);
 			while(SensorValue[ArmPotentiometer] > preloadPosition - 10){
 				wait1Msec(10);
 			}
@@ -62,7 +68,7 @@ task launcherControl{
 			int error = preloadPosition - SensorValue[ArmPotentiometer];
 			int driveSpeed = launcherKp * error;
 
-			driveSpeed = abs(driveSpeed)>maxChargePower?maxChargePower*sgn(driveSpeed):0;
+			driveSpeed = abs(driveSpeed)>launchPower?launchPower*sgn(driveSpeed):0;
 
 			driveLauncher(driveSpeed);
 		}
